@@ -3,19 +3,17 @@
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { Wheat, Plus, Package, MessageSquare } from 'lucide-react'
+import { Wheat, Plus, Package, MessageSquare, BarChart2 } from 'lucide-react'
 
-type Tab = 'listings' | 'create' | 'orders'
+type Tab = 'listings' | 'create' | 'orders' | 'analytics'
+
+const CATEGORIES = ['Crop Data', 'Soil & Weather', 'Livestock', 'Market Prices', 'Satellite Imagery', 'Pesticide & Fertilizer', 'General']
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
-    PENDING: 'bg-amber-100 text-amber-700',
-    APPROVED: 'bg-green-100 text-green-700',
-    REJECTED: 'bg-red-100 text-red-700',
-    PAID: 'bg-blue-100 text-blue-700',
-    DELIVERED: 'bg-green-100 text-green-700',
-    HELD: 'bg-orange-100 text-orange-700',
-    DISPUTED: 'bg-red-100 text-red-700',
+    PENDING: 'bg-amber-100 text-amber-700', APPROVED: 'bg-green-100 text-green-700',
+    REJECTED: 'bg-red-100 text-red-700', PAID: 'bg-blue-100 text-blue-700',
+    DELIVERED: 'bg-green-100 text-green-700', HELD: 'bg-orange-100 text-orange-700', DISPUTED: 'bg-red-100 text-red-700',
   }
   return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colors[status] || 'bg-stone-100 text-stone-600'}`}>{status}</span>
 }
@@ -26,7 +24,8 @@ export default function Seller() {
   const [tab, setTab] = useState<Tab>('listings')
   const [listings, setListings] = useState<any[]>([])
   const [orders, setOrders] = useState<any[]>([])
-  const [form, setForm] = useState({ title: '', description: '', price: '', fileUrl: '', sampleUrl: '', license: 'Commercial', schema: '' })
+  const [analytics, setAnalytics] = useState<any>(null)
+  const [form, setForm] = useState({ title: '', description: '', price: '', category: 'General', fileUrl: '', sampleUrl: '', license: 'Commercial', schema: '' })
   const [loading, setLoading] = useState(false)
   const [openThread, setOpenThread] = useState<string | null>(null)
   const [messages, setMessages] = useState<Record<string, any[]>>({})
@@ -42,8 +41,15 @@ export default function Seller() {
     fetch('/api/seller/orders').then(r => r.json()).then(setOrders)
   }, [session])
 
+  useEffect(() => {
+    if (tab === 'analytics' && !analytics && session && (session.user as any).role === 'SELLER') {
+      fetch('/api/seller/analytics').then(r => r.json()).then(setAnalytics)
+    }
+  }, [tab, analytics, session])
+
   const loadMessages = async (orderId: string) => {
     const res = await fetch(`/api/orders/${orderId}/messages`)
+    setMessages(m => ({ ...m, [orderId]: [] }))
     const data = await res.json()
     setMessages(m => ({ ...m, [orderId]: data }))
     setOpenThread(orderId)
@@ -52,9 +58,7 @@ export default function Seller() {
   const sendMessage = async (orderId: string) => {
     const content = msgText[orderId]
     if (!content?.trim()) return
-    await fetch(`/api/orders/${orderId}/messages`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content })
-    })
+    await fetch(`/api/orders/${orderId}/messages`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content }) })
     setMsgText(t => ({ ...t, [orderId]: '' }))
     loadMessages(orderId)
   }
@@ -63,14 +67,13 @@ export default function Seller() {
     e.preventDefault()
     setLoading(true)
     const res = await fetch('/api/seller/listings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...form, price: parseFloat(form.price) })
     })
     if (res.ok) {
       const newListing = await res.json()
       setListings(l => [newListing, ...l])
-      setForm({ title: '', description: '', price: '', fileUrl: '', sampleUrl: '', license: 'Commercial', schema: '' })
+      setForm({ title: '', description: '', price: '', category: 'General', fileUrl: '', sampleUrl: '', license: 'Commercial', schema: '' })
       setTab('listings')
     }
     setLoading(false)
@@ -84,9 +87,7 @@ export default function Seller() {
     <div className="min-h-screen bg-stone-50">
       <header className="bg-green-800 text-white px-6 py-4 flex items-center gap-3">
         <a href="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center">
-            <Wheat className="w-5 h-5 text-white" />
-          </div>
+          <div className="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center"><Wheat className="w-5 h-5 text-white" /></div>
           <span className="font-bold">DataFarm</span>
         </a>
         <span className="text-green-300">›</span>
@@ -94,11 +95,12 @@ export default function Seller() {
       </header>
 
       <div className="max-w-5xl mx-auto px-4 py-8">
-        <div className="flex gap-2 mb-6 border-b border-stone-200 pb-2">
+        <div className="flex gap-2 mb-6 border-b border-stone-200 pb-2 flex-wrap">
           {([
             { key: 'listings' as Tab, label: 'My Listings', icon: Package },
             { key: 'create' as Tab, label: 'Create Listing', icon: Plus },
             { key: 'orders' as Tab, label: 'Orders', icon: MessageSquare },
+            { key: 'analytics' as Tab, label: 'Analytics', icon: BarChart2 },
           ]).map(({ key, label, icon: Icon }) => (
             <button key={key} onClick={() => setTab(key)}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${tab === key ? 'bg-green-700 text-white' : 'text-stone-600 hover:text-green-700'}`}>
@@ -115,8 +117,8 @@ export default function Seller() {
               <div key={l.id} className="bg-white rounded-xl border border-stone-200 p-4 flex justify-between items-center">
                 <div>
                   <div className="font-medium text-stone-900">{l.title}</div>
-                  <div className="text-sm text-stone-500">${l.price} · {l.license}</div>
-                  {l.fileUrl && <div className="text-xs text-green-600 mt-0.5">File: {l.fileUrl}</div>}
+                  <div className="text-sm text-stone-500">${l.price} · {l.license} · <span className="text-green-700">{l.category}</span></div>
+                  {l.fileUrl && <div className="text-xs text-stone-400 mt-0.5 truncate max-w-sm">{l.fileUrl}</div>}
                 </div>
                 <StatusBadge status={l.status} />
               </div>
@@ -129,42 +131,50 @@ export default function Seller() {
           <div className="bg-white rounded-xl border border-stone-200 p-6 max-w-2xl">
             <h2 className="font-bold text-stone-900 mb-4">New Dataset Listing</h2>
             <form onSubmit={createListing} className="space-y-4">
-              {[
-                { key: 'title', label: 'Title *', placeholder: 'e.g. Iowa Corn Yield Dataset 2024' },
-                { key: 'price', label: 'Price (USD) *', placeholder: '99.00', type: 'number' },
-                { key: 'fileUrl', label: 'File URL *', placeholder: 'https://...' },
-                { key: 'sampleUrl', label: 'Sample URL', placeholder: 'https://...' },
-              ].map(({ key, label, placeholder, type = 'text' }) => (
-                <div key={key}>
-                  <label className="block text-sm font-medium text-stone-700 mb-1">{label}</label>
-                  <input
-                    type={type}
-                    value={(form as any)[key]}
-                    onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
-                    placeholder={placeholder}
-                    required={!['sampleUrl'].includes(key)}
-                    className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                  />
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Title *</label>
+                <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} required placeholder="e.g. Iowa Corn Yield Dataset 2024"
+                  className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-stone-700 mb-1">Price (USD) *</label>
+                  <input type="number" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} required placeholder="99.00"
+                    className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
                 </div>
-              ))}
+                <div>
+                  <label className="block text-sm font-medium text-stone-700 mb-1">Category *</label>
+                  <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                    className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                    {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                  </select>
+                </div>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-stone-700 mb-1">Description *</label>
-                <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} required rows={3}
+                <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} required rows={3} resize-none
                   className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Full Dataset URL *</label>
+                <input value={form.fileUrl} onChange={e => setForm(f => ({ ...f, fileUrl: e.target.value }))} required placeholder="https://..."
+                  className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Sample URL (public preview)</label>
+                <input value={form.sampleUrl} onChange={e => setForm(f => ({ ...f, sampleUrl: e.target.value }))} placeholder="https://..."
+                  className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-stone-700 mb-1">License *</label>
                 <select value={form.license} onChange={e => setForm(f => ({ ...f, license: e.target.value }))}
                   className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
-                  <option>Commercial</option>
-                  <option>Research Only</option>
-                  <option>Non-Commercial</option>
-                  <option>Open</option>
+                  <option>Commercial</option><option>Research Only</option><option>Non-Commercial</option><option>Open</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">Data Schema (JSON, optional)</label>
-                <textarea value={form.schema} onChange={e => setForm(f => ({ ...f, schema: e.target.value }))} rows={2} placeholder='{"field": "type"}'
+                <label className="block text-sm font-medium text-stone-700 mb-1">Data Schema (JSON)</label>
+                <textarea value={form.schema} onChange={e => setForm(f => ({ ...f, schema: e.target.value }))} rows={2} placeholder='{"field":"type"}'
                   className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-green-500 resize-none" />
               </div>
               <button type="submit" disabled={loading}
@@ -184,7 +194,7 @@ export default function Seller() {
                 <div className="flex justify-between items-start">
                   <div>
                     <div className="font-medium text-stone-900">{o.listing?.title}</div>
-                    <div className="text-sm text-stone-500">Buyer: {o.buyer?.name} · ${o.amount.toFixed(2)}</div>
+                    <div className="text-sm text-stone-500">Buyer: {o.buyer?.name} ({o.buyer?.email}) · ${o.amount.toFixed(2)}</div>
                     <div className="flex items-center gap-2 mt-1"><StatusBadge status={o.status} /></div>
                   </div>
                   <button onClick={() => openThread === o.id ? setOpenThread(null) : loadMessages(o.id)}
@@ -197,10 +207,7 @@ export default function Seller() {
                     <div className="space-y-2 max-h-48 overflow-y-auto mb-3">
                       {(messages[o.id] || []).length === 0 && <p className="text-xs text-stone-400">No messages yet.</p>}
                       {(messages[o.id] || []).map((m: any) => (
-                        <div key={m.id} className="text-sm">
-                          <span className="font-medium text-stone-700">{m.from.name}: </span>
-                          <span className="text-stone-600">{m.content}</span>
-                        </div>
+                        <div key={m.id} className="text-sm"><span className="font-medium text-stone-700">{m.from.name}: </span><span className="text-stone-600">{m.content}</span></div>
                       ))}
                     </div>
                     <div className="flex gap-2">
@@ -212,6 +219,59 @@ export default function Seller() {
                 )}
               </div>
             ))}
+          </div>
+        )}
+
+        {/* ANALYTICS */}
+        {tab === 'analytics' && (
+          <div>
+            {!analytics ? <p className="text-stone-400 text-sm">Loading analytics...</p> : (
+              <div className="space-y-6">
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="bg-white rounded-xl border border-stone-200 p-5 text-center">
+                    <div className="text-3xl font-bold text-green-700">${analytics.totalRevenue.toFixed(2)}</div>
+                    <div className="text-sm text-stone-500 mt-1">Total Revenue</div>
+                  </div>
+                  <div className="bg-white rounded-xl border border-stone-200 p-5 text-center">
+                    <div className="text-3xl font-bold text-blue-600">{analytics.totalOrders}</div>
+                    <div className="text-sm text-stone-500 mt-1">Completed Orders</div>
+                  </div>
+                  <div className="bg-white rounded-xl border border-stone-200 p-5 text-center">
+                    <div className="text-3xl font-bold text-amber-600">{analytics.pendingOrders}</div>
+                    <div className="text-sm text-stone-500 mt-1">Pending Orders</div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl border border-stone-200 p-5">
+                  <h3 className="font-semibold text-stone-900 mb-4">Listings Performance</h3>
+                  <div className="space-y-3">
+                    {analytics.listings.map((l: any) => (
+                      <div key={l.id} className="flex justify-between items-center py-2 border-b border-stone-100 last:border-0">
+                        <div>
+                          <div className="text-sm font-medium text-stone-900">{l.title}</div>
+                          <div className="text-xs text-stone-400">${l.price} · {l._count.orders} orders · {l._count.reviews} reviews</div>
+                        </div>
+                        <StatusBadge status={l.status} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {Object.keys(analytics.monthlyRevenue).length > 0 && (
+                  <div className="bg-white rounded-xl border border-stone-200 p-5">
+                    <h3 className="font-semibold text-stone-900 mb-4">Revenue by Month</h3>
+                    <div className="space-y-2">
+                      {Object.entries(analytics.monthlyRevenue).map(([month, rev]: any) => (
+                        <div key={month} className="flex justify-between text-sm">
+                          <span className="text-stone-600">{month}</span>
+                          <span className="font-medium text-green-700">${rev.toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

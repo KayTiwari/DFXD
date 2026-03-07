@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,36 +8,37 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  role      String   @default("BUYER")
-  verified  Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  passwordHash String?
+  role         String   @default("BUYER")
+  verified     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  // Relations
-  sellerProfile SellerProfile?
-  listings      Listing[]
-  orders        Order[]
-  sentMessages  Message[] @relation("MessageSender")
-  receivedMessages Message[] @relation("MessageReceiver")
-  auditLogs     AuditLog[]
+  sellerProfile    SellerProfile?
+  listings         Listing[]
+  orders           Order[]
+  sentMessages     Message[]  @relation("MessageSender")
+  receivedMessages Message[]  @relation("MessageReceiver")
+  auditLogs        AuditLog[]
+  reviews          Review[]
 }
 
 model SellerProfile {
-  id          String   @id @default(cuid())
-  userId      String   @unique
+  id           String   @id @default(cuid())
+  userId       String   @unique
   businessName String
   businessType String
-  taxId       String?
-  address     String
-  phone       String
-  website     String?
-  description String
-  verified    Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  taxId        String?
+  address      String
+  phone        String
+  website      String?
+  description  String
+  verified     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -50,17 +48,19 @@ model Listing {
   title       String
   description String
   price       Float
-  fileUrl     String?  // For sample or full file
+  category    String   @default("General")
+  fileUrl     String?
   sampleUrl   String?
-  schema      String?  // JSON schema
+  schema      String?
   license     String
   status      String   @default("PENDING")
   sellerId    String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  seller User @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  orders Order[]
+  seller  User     @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  orders  Order[]
+  reviews Review[]
 }
 
 model Order {
@@ -71,39 +71,39 @@ model Order {
   platformFee   Float?
   status        String    @default("PENDING")
   paymentId     String?
-  fileUrl       String?   // Delivered file
+  fileUrl       String?
   deliveredAt   DateTime?
   termsAccepted Boolean   @default(false)
   heldAt        DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  buyer   User     @relation(fields: [buyerId], references: [id], onDelete: Cascade)
-  listing Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  buyer    User      @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  listing  Listing   @relation(fields: [listingId], references: [id], onDelete: Cascade)
   disputes Dispute[]
   messages Message[]
   payment  Payment?
 }
 
 model Payment {
-  id       String   @id @default(cuid())
-  orderId  String   @unique
-  stripeId String
-  amount   Float
-  status   String
+  id        String   @id @default(cuid())
+  orderId   String   @unique
+  stripeId  String
+  amount    Float
+  status    String
   createdAt DateTime @default(now())
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
 
 model Dispute {
-  id          String   @id @default(cuid())
-  orderId     String
-  reason      String
-  status      String   @default("OPEN")
-  resolution  String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(cuid())
+  orderId    String
+  reason     String
+  status     String   @default("OPEN")
+  resolution String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
@@ -116,9 +116,21 @@ model Message {
   orderId   String?
   createdAt DateTime @default(now())
 
-  from User @relation("MessageSender", fields: [fromId], references: [id], onDelete: Cascade)
-  to   User @relation("MessageReceiver", fields: [toId], references: [id], onDelete: Cascade)
+  from  User   @relation("MessageSender", fields: [fromId], references: [id], onDelete: Cascade)
+  to    User   @relation("MessageReceiver", fields: [toId], references: [id], onDelete: Cascade)
   order Order? @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  listingId String
+  userId    String
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model AuditLog {
