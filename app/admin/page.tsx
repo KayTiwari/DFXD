@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Wheat, CheckCircle, XCircle, Package, AlertTriangle, Truck } from 'lucide-react'
 
-type Tab = 'sellers' | 'listings' | 'orders' | 'disputes'
+type Tab = 'sellers' | 'listings' | 'orders' | 'disputes' | 'audit'
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
@@ -30,6 +30,7 @@ export default function Admin() {
   const [listings, setListings] = useState<any[]>([])
   const [orders, setOrders] = useState<any[]>([])
   const [disputes, setDisputes] = useState<any[]>([])
+  const [auditLogs, setAuditLogs] = useState<any[]>([])
   const [deliverUrls, setDeliverUrls] = useState<Record<string, string>>({})
   const [resolutions, setResolutions] = useState<Record<string, string>>({})
 
@@ -43,6 +44,7 @@ export default function Admin() {
     fetch('/api/admin/pending-listings').then(r => r.json()).then(setListings)
     fetch('/api/admin/orders').then(r => r.json()).then(setOrders)
     fetch('/api/admin/disputes').then(r => r.json()).then(setDisputes)
+    fetch('/api/admin/audit-log').then(r => r.json()).then(setAuditLogs)
   }, [session])
 
   const post = async (url: string, body: object) => {
@@ -88,6 +90,7 @@ export default function Admin() {
     { key: 'listings', label: 'Pending Listings', count: listings.length },
     { key: 'orders', label: 'All Orders', count: orders.length },
     { key: 'disputes', label: 'Disputes', count: disputes.filter(d => d.status === 'OPEN').length },
+    { key: 'audit', label: 'Audit Log', count: 0 },
   ]
 
   return (
@@ -111,7 +114,7 @@ export default function Admin() {
               onClick={() => setTab(t.key)}
               className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${tab === t.key ? 'bg-green-700 text-white' : 'text-stone-600 hover:text-green-700'}`}
             >
-              {t.label} {t.count > 0 && <span className="ml-1 bg-amber-500 text-white text-xs rounded-full px-1.5">{t.count}</span>}
+              {t.label} {t.count > 0 && <span className="ml-1 bg-amber-500 text-white text-xs rounded-full px-1.5 py-0.5">{t.count}</span>}
             </button>
           ))}
         </div>
@@ -246,6 +249,39 @@ export default function Admin() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+        {/* AUDIT LOG */}
+        {tab === 'audit' && (
+          <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
+            {auditLogs.length === 0 ? (
+              <p className="text-stone-500 text-sm p-5">No audit log entries.</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-stone-50 border-b border-stone-200">
+                  <tr>
+                    <th className="text-left px-4 py-3 text-stone-600 font-medium">Action</th>
+                    <th className="text-left px-4 py-3 text-stone-600 font-medium">Admin</th>
+                    <th className="text-left px-4 py-3 text-stone-600 font-medium">Details</th>
+                    <th className="text-left px-4 py-3 text-stone-600 font-medium">Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {auditLogs.map((log: any) => (
+                    <tr key={log.id} className="border-b border-stone-100 last:border-0 hover:bg-stone-50">
+                      <td className="px-4 py-3">
+                        <span className="font-mono text-xs bg-stone-100 text-stone-700 px-2 py-0.5 rounded">{log.action}</span>
+                      </td>
+                      <td className="px-4 py-3 text-stone-700">{log.user?.name || log.userId}</td>
+                      <td className="px-4 py-3 text-stone-500 max-w-xs truncate">{log.details}</td>
+                      <td className="px-4 py-3 text-stone-400 whitespace-nowrap">
+                        {new Date(log.createdAt).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         )}
       </div>

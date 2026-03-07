@@ -8,7 +8,7 @@ import { Wheat, Star, CheckCircle, X, ArrowLeft, Download, ExternalLink } from '
 interface Listing {
   id: string; title: string; description: string; price: number; category: string
   sampleUrl: string | null; schema: string | null; license: string
-  seller: { name: string; verified: boolean; sellerProfile: { businessName: string; businessType: string } | null }
+  seller: { id: string; name: string; verified: boolean; sellerProfile: { businessName: string; businessType: string } | null }
   reviews: { id: string; rating: number; comment: string | null; createdAt: string; user: { name: string } }[]
   _count: { orders: number; reviews: number }
 }
@@ -231,7 +231,7 @@ export default function ListingDetail() {
                   </div>
                   <div>
                     <div className="flex items-center gap-1">
-                      <span className="text-sm font-medium text-stone-900">{listing.seller.name}</span>
+                      <a href={`/sellers/${listing.seller.id}`} className="text-sm font-medium text-stone-900 hover:text-green-700">{listing.seller.name}</a>
                       {listing.seller.verified && <CheckCircle className="w-3.5 h-3.5 text-green-600" />}
                     </div>
                     {listing.seller.sellerProfile && (

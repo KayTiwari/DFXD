@@ -3,7 +3,7 @@
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { Wheat, Plus, Package, MessageSquare, BarChart2 } from 'lucide-react'
+import { Wheat, Plus, Package, MessageSquare, BarChart2, Pencil, Trash2 } from 'lucide-react'
 
 type Tab = 'listings' | 'create' | 'orders' | 'analytics'
 
@@ -26,6 +26,7 @@ export default function Seller() {
   const [orders, setOrders] = useState<any[]>([])
   const [analytics, setAnalytics] = useState<any>(null)
   const [form, setForm] = useState({ title: '', description: '', price: '', category: 'General', fileUrl: '', sampleUrl: '', license: 'Commercial', schema: '' })
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [openThread, setOpenThread] = useState<string | null>(null)
   const [messages, setMessages] = useState<Record<string, any[]>>({})
@@ -63,20 +64,33 @@ export default function Seller() {
     loadMessages(orderId)
   }
 
-  const createListing = async (e: React.FormEvent) => {
+  const saveListing = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    const res = await fetch('/api/seller/listings', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, price: parseFloat(form.price) })
-    })
+    const body = JSON.stringify({ ...form, price: parseFloat(form.price) })
+    const res = editingId
+      ? await fetch(`/api/seller/listings/${editingId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body })
+      : await fetch('/api/seller/listings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body })
     if (res.ok) {
-      const newListing = await res.json()
-      setListings(l => [newListing, ...l])
+      const listing = await res.json()
+      setListings(l => editingId ? l.map(x => x.id === editingId ? listing : x) : [listing, ...l])
       setForm({ title: '', description: '', price: '', category: 'General', fileUrl: '', sampleUrl: '', license: 'Commercial', schema: '' })
+      setEditingId(null)
       setTab('listings')
     }
     setLoading(false)
+  }
+
+  const startEdit = (l: any) => {
+    setForm({ title: l.title, description: l.description, price: String(l.price), category: l.category || 'General', fileUrl: l.fileUrl || '', sampleUrl: l.sampleUrl || '', license: l.license, schema: l.schema || '' })
+    setEditingId(l.id)
+    setTab('create')
+  }
+
+  const deleteListing = async (id: string) => {
+    if (!confirm('Delete this listing?')) return
+    const res = await fetch(`/api/seller/listings/${id}`, { method: 'DELETE' })
+    if (res.ok) setListings(l => l.filter(x => x.id !== id))
   }
 
   if (!session || (session.user as any).role !== 'SELLER') {
@@ -120,7 +134,11 @@ export default function Seller() {
                   <div className="text-sm text-stone-500">${l.price} · {l.license} · <span className="text-green-700">{l.category}</span></div>
                   {l.fileUrl && <div className="text-xs text-stone-400 mt-0.5 truncate max-w-sm">{l.fileUrl}</div>}
                 </div>
-                <StatusBadge status={l.status} />
+                <div className="flex items-center gap-2">
+                  <StatusBadge status={l.status} />
+                  <button onClick={() => startEdit(l)} className="p-1.5 text-stone-400 hover:text-green-700 rounded"><Pencil className="w-4 h-4" /></button>
+                  <button onClick={() => deleteListing(l.id)} className="p-1.5 text-stone-400 hover:text-red-600 rounded"><Trash2 className="w-4 h-4" /></button>
+                </div>
               </div>
             ))}
           </div>
@@ -129,8 +147,8 @@ export default function Seller() {
         {/* CREATE LISTING */}
         {tab === 'create' && (
           <div className="bg-white rounded-xl border border-stone-200 p-6 max-w-2xl">
-            <h2 className="font-bold text-stone-900 mb-4">New Dataset Listing</h2>
-            <form onSubmit={createListing} className="space-y-4">
+            <h2 className="font-bold text-stone-900 mb-4">{editingId ? 'Edit Listing' : 'New Dataset Listing'}</h2>
+            <form onSubmit={saveListing} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-stone-700 mb-1">Title *</label>
                 <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} required placeholder="e.g. Iowa Corn Yield Dataset 2024"
@@ -179,7 +197,7 @@ export default function Seller() {
               </div>
               <button type="submit" disabled={loading}
                 className="w-full bg-green-700 hover:bg-green-800 text-white font-medium py-2.5 rounded-lg transition-colors disabled:opacity-50">
-                {loading ? 'Submitting...' : 'Submit for Review'}
+                {loading ? 'Saving...' : editingId ? 'Save Changes' : 'Submit for Review'}
               </button>
             </form>
           </div>
