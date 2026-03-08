@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
 
   await prisma.sellerProfile.update({
     where: { userId: id },
-    data: { verified: true }
+    data: { verified: true, status: 'APPROVED' }
   })
 
   await prisma.auditLog.create({

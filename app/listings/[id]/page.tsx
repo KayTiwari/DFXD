@@ -3,13 +3,18 @@
 import { useEffect, useState } from 'react'
 import { useSession, signIn } from 'next-auth/react'
 import { useParams } from 'next/navigation'
-import { Wheat, Star, CheckCircle, X, ArrowLeft, Download, ExternalLink } from 'lucide-react'
+import { Wheat, Star, CheckCircle, X, ArrowLeft, Download, ExternalLink, FileText } from 'lucide-react'
+
+interface ListingFile {
+  id: string; name: string; url: string; size: number | null; type: string | null
+}
 
 interface Listing {
   id: string; title: string; description: string; price: number; category: string
   sampleUrl: string | null; schema: string | null; license: string
   seller: { id: string; name: string; verified: boolean; sellerProfile: { businessName: string; businessType: string } | null }
   reviews: { id: string; rating: number; comment: string | null; createdAt: string; user: { name: string } }[]
+  files: ListingFile[]
   _count: { orders: number; reviews: number }
 }
 
@@ -168,6 +173,28 @@ export default function ListingDetail() {
                     </pre>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Files */}
+            {listing.files?.length > 0 && (
+              <div className="bg-white rounded-xl border border-stone-200 p-6">
+                <h2 className="font-bold text-stone-900 mb-4">Included Files ({listing.files.length})</h2>
+                <div className="space-y-2">
+                  {listing.files.map(f => (
+                    <div key={f.id} className="flex items-center gap-3 p-3 bg-stone-50 rounded-lg">
+                      <FileText className="w-5 h-5 text-green-600 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-stone-900 truncate">{f.name}</div>
+                        <div className="text-xs text-stone-400">
+                          {f.type && <span>{f.type}</span>}
+                          {f.size && <span> · {(f.size / 1024).toFixed(0)} KB</span>}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-stone-400 mt-3">File access granted after purchase.</p>
               </div>
             )}
 
