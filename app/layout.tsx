@@ -11,6 +11,9 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'DataFarm — Agricultural Data Marketplace',
   description: 'Buy and sell premium agricultural datasets from verified businesses.',
+  icons: {
+    icon: '/favicon.svg',
+  },
 }
 
 export default function RootLayout({
