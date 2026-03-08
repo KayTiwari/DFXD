@@ -59,7 +59,7 @@ export default function SellerProfile() {
               <div className="flex items-center gap-2">
                 <h1 className="text-xl font-bold text-stone-900">{profile.businessName || seller.name}</h1>
                 {(seller.verified || profile.verified) && (
-                  <CheckCircle className="w-5 h-5 text-green-600" title="Verified seller" />
+                  <span title="Verified seller"><CheckCircle className="w-5 h-5 text-green-600" /></span>
                 )}
               </div>
               <div className="flex items-center gap-3 mt-1 text-sm text-stone-500 flex-wrap">
