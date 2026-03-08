@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useSession, signOut } from 'next-auth/react'
-import { Search, Wheat, ShoppingCart, CheckCircle, SlidersHorizontal, X, Shield, BarChart3, Database, ArrowRight } from 'lucide-react'
+import { Search, Wheat, ShoppingCart, CheckCircle, SlidersHorizontal, X, Shield, BarChart3, Database, ArrowRight, ChevronLeft, ChevronRight, Zap, Globe, Users } from 'lucide-react'
 
 const CATEGORIES = ['All', 'Crop Data', 'Soil & Weather', 'Livestock', 'Market Prices', 'Satellite Imagery', 'Pesticide & Fertilizer', 'General']
 const LICENSES = ['Any', 'Commercial', 'Research Only', 'Non-Commercial', 'Open']
@@ -31,10 +31,25 @@ export default function Home() {
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
   const [showFilters, setShowFilters] = useState(false)
+  const [carouselIdx, setCarouselIdx] = useState(0)
+
+  const VALUE_CARDS = [
+    { icon: Shield, color: 'bg-green-100', iconColor: 'text-green-700', title: 'Verified Sellers', desc: 'Every seller undergoes business verification and admin review before listing datasets on the marketplace.' },
+    { icon: Database, color: 'bg-amber-100', iconColor: 'text-amber-600', title: 'Quality Data', desc: 'Preview samples, view data schemas, and read buyer reviews before purchasing. Every listing is admin-approved.' },
+    { icon: BarChart3, color: 'bg-blue-100', iconColor: 'text-blue-600', title: 'Secure Transactions', desc: 'Stripe-powered payments with dispute protection. Files delivered only after confirmed payment.' },
+    { icon: Zap, color: 'bg-purple-100', iconColor: 'text-purple-600', title: 'Instant Delivery', desc: 'Datasets are delivered automatically after payment. No waiting — access your purchased data immediately.' },
+    { icon: Globe, color: 'bg-teal-100', iconColor: 'text-teal-600', title: 'Global Reach', desc: 'Connect with agricultural data producers worldwide. From local farms to international research institutions.' },
+    { icon: Users, color: 'bg-rose-100', iconColor: 'text-rose-600', title: 'Community Reviews', desc: 'Read honest reviews from verified buyers. Rate and review datasets to help the community find quality data.' },
+  ]
 
   useEffect(() => {
     fetch('/api/stats').then(r => r.json()).then(setStats).catch(() => {})
   }, [])
+
+  useEffect(() => {
+    const timer = setInterval(() => setCarouselIdx(i => (i + 1) % VALUE_CARDS.length), 4000)
+    return () => clearInterval(timer)
+  }, [VALUE_CARDS.length])
 
   const fetchListings = useCallback(() => {
     setLoading(true)
@@ -94,10 +109,12 @@ export default function Home() {
 
       {/* Hero */}
       <div className="relative bg-gradient-to-br from-green-900 via-green-800 to-green-700 text-white overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-10 left-10 w-40 h-40 border border-green-400 rounded-full" />
-          <div className="absolute bottom-10 right-20 w-60 h-60 border border-green-400 rounded-full" />
-          <div className="absolute top-20 right-40 w-20 h-20 border border-amber-400 rounded-full" />
+        <div className="absolute inset-0">
+          <div className="absolute top-10 left-10 w-40 h-40 border border-green-400 rounded-full animate-circle-1" />
+          <div className="absolute bottom-10 right-20 w-60 h-60 border border-green-400 rounded-full animate-circle-2" />
+          <div className="absolute top-20 right-40 w-20 h-20 border border-amber-400 rounded-full animate-circle-3" />
+          <div className="absolute bottom-32 left-1/3 w-32 h-32 border border-green-300 rounded-full animate-circle-2" />
+          <div className="absolute top-1/2 right-10 w-24 h-24 border border-amber-300 rounded-full animate-circle-1" />
         </div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
           <div className="inline-flex items-center gap-2 bg-green-700/50 border border-green-500/30 rounded-full px-4 py-1.5 text-sm text-green-200 mb-6">
@@ -146,33 +163,52 @@ export default function Home() {
         </div>
       )}
 
-      {/* Value Proposition */}
+      {/* Value Proposition Carousel */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-stone-900">Why DataFarm?</h2>
           <p className="text-stone-500 mt-2 max-w-xl mx-auto">A secure, transparent marketplace built for the agricultural data economy.</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="bg-white rounded-2xl border border-stone-200 p-8 text-center hover:shadow-md transition-shadow">
-            <div className="w-14 h-14 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Shield className="w-7 h-7 text-green-700" />
+
+        <div className="relative">
+          {/* Navigation arrows */}
+          <button onClick={() => setCarouselIdx(i => (i - 1 + VALUE_CARDS.length) % VALUE_CARDS.length)}
+            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 w-10 h-10 bg-white rounded-full shadow-md border border-stone-200 flex items-center justify-center text-stone-500 hover:text-green-700 hover:border-green-300 transition-colors hidden md:flex">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <button onClick={() => setCarouselIdx(i => (i + 1) % VALUE_CARDS.length)}
+            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 w-10 h-10 bg-white rounded-full shadow-md border border-stone-200 flex items-center justify-center text-stone-500 hover:text-green-700 hover:border-green-300 transition-colors hidden md:flex">
+            <ChevronRight className="w-5 h-5" />
+          </button>
+
+          {/* Carousel track */}
+          <div className="overflow-hidden">
+            <div className="flex transition-transform duration-500 ease-in-out"
+              style={{ transform: `translateX(-${carouselIdx * (100 / 3)}%)` }}>
+              {/* Render all cards + duplicates for seamless loop */}
+              {[...VALUE_CARDS, ...VALUE_CARDS.slice(0, 3)].map((card, i) => {
+                const Icon = card.icon
+                return (
+                  <div key={i} className="w-full md:w-1/3 flex-shrink-0 px-3">
+                    <div className="bg-white rounded-2xl border border-stone-200 p-8 text-center hover:shadow-md transition-shadow h-full">
+                      <div className={`w-14 h-14 ${card.color} rounded-2xl flex items-center justify-center mx-auto mb-4`}>
+                        <Icon className={`w-7 h-7 ${card.iconColor}`} />
+                      </div>
+                      <h3 className="font-bold text-stone-900 text-lg mb-2">{card.title}</h3>
+                      <p className="text-stone-500 text-sm leading-relaxed">{card.desc}</p>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
-            <h3 className="font-bold text-stone-900 text-lg mb-2">Verified Sellers</h3>
-            <p className="text-stone-500 text-sm leading-relaxed">Every seller undergoes business verification and admin review before listing datasets on the marketplace.</p>
           </div>
-          <div className="bg-white rounded-2xl border border-stone-200 p-8 text-center hover:shadow-md transition-shadow">
-            <div className="w-14 h-14 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Database className="w-7 h-7 text-amber-600" />
-            </div>
-            <h3 className="font-bold text-stone-900 text-lg mb-2">Quality Data</h3>
-            <p className="text-stone-500 text-sm leading-relaxed">Preview samples, view data schemas, and read buyer reviews before purchasing. Every listing is admin-approved.</p>
-          </div>
-          <div className="bg-white rounded-2xl border border-stone-200 p-8 text-center hover:shadow-md transition-shadow">
-            <div className="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <BarChart3 className="w-7 h-7 text-blue-600" />
-            </div>
-            <h3 className="font-bold text-stone-900 text-lg mb-2">Secure Transactions</h3>
-            <p className="text-stone-500 text-sm leading-relaxed">Stripe-powered payments with dispute protection. Files delivered only after confirmed payment.</p>
+
+          {/* Dot indicators */}
+          <div className="flex justify-center gap-2 mt-8">
+            {VALUE_CARDS.map((_, i) => (
+              <button key={i} onClick={() => setCarouselIdx(i)}
+                className={`w-2.5 h-2.5 rounded-full transition-colors ${i === carouselIdx % VALUE_CARDS.length ? 'bg-green-700' : 'bg-stone-300 hover:bg-stone-400'}`} />
+            ))}
           </div>
         </div>
       </div>

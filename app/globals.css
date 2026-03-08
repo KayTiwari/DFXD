@@ -8,3 +8,17 @@
   --farm-amber: #d97706;
   --farm-stone: #fafaf9;
 }
+
+@keyframes pulse-grow {
+  0%, 100% { transform: scale(1); opacity: 0.08; }
+  50% { transform: scale(1.35); opacity: 0.15; }
+}
+
+@keyframes pulse-grow-alt {
+  0%, 100% { transform: scale(1.2); opacity: 0.12; }
+  50% { transform: scale(0.8); opacity: 0.06; }
+}
+
+.animate-circle-1 { animation: pulse-grow 6s ease-in-out infinite; }
+.animate-circle-2 { animation: pulse-grow-alt 8s ease-in-out infinite; }
+.animate-circle-3 { animation: pulse-grow 10s ease-in-out infinite 1s; }
