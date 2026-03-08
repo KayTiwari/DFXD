@@ -2,13 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import Stripe from 'stripe'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-02-25.clover' })
-
 export async function POST(request: NextRequest) {
+  const stripeSecretKey = process.env.STRIPE_SECRET_KEY
+  const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+  if (!stripeSecretKey || !stripeWebhookSecret) {
+    return NextResponse.json({ error: 'Server not configured for webhook' }, { status: 500 })
+  }
+  const stripe = new Stripe(stripeSecretKey, { apiVersion: '2026-02-25.clover' })
+
   const body = await request.text()
   const sig = request.headers.get('stripe-signature')!
   let event: Stripe.Event
-  try { event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET!) }
+  try { event = stripe.webhooks.constructEvent(body, sig, stripeWebhookSecret) }
   catch { return NextResponse.json({ error: 'Invalid signature' }, { status: 400 }) }
 
   if (event.type === 'checkout.session.completed') {

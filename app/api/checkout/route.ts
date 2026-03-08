@@ -4,10 +4,16 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import Stripe from 'stripe'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-02-25.clover' })
 const PLATFORM_FEE_PCT = 0.1
 
 export async function POST(request: NextRequest) {
+  const stripeSecretKey = process.env.STRIPE_SECRET_KEY
+  const nextAuthUrl = process.env.NEXTAUTH_URL
+  if (!stripeSecretKey || !nextAuthUrl) {
+    return NextResponse.json({ error: 'Server not configured for checkout' }, { status: 500 })
+  }
+  const stripe = new Stripe(stripeSecretKey, { apiVersion: '2026-02-25.clover' })
+
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
@@ -49,8 +55,8 @@ export async function POST(request: NextRequest) {
       quantity: 1,
     }],
     mode: 'payment',
-    success_url: `${process.env.NEXTAUTH_URL}/buyer/orders?success=1`,
-    cancel_url: `${process.env.NEXTAUTH_URL}/?cancelled=1`,
+    success_url: `${nextAuthUrl}/buyer/orders?success=1`,
+    cancel_url: `${nextAuthUrl}/?cancelled=1`,
     metadata: { orderId: order.id },
   })
 
